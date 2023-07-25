@@ -9,6 +9,7 @@
 #include <RenderPasses/GeometryPass.hpp>
 #include <RenderPasses/LightPass.hpp>
 #include <RenderPasses/ShadowPass.hpp>
+#include <RenderPasses/TaaPass.hpp>
 
 FrameGraph::FrameGraph() {
   // glPointSize(5.f);
@@ -18,13 +19,13 @@ FrameGraph::FrameGraph() {
   // glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   // glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
-  // Damn this is ugly..
   m_renderPass[static_cast<size_t>(PassId::kShadow)] = new ShadowPass();
   m_renderPass[static_cast<size_t>(PassId::kGeom)] = new GeometryPass();
   m_renderPass[static_cast<size_t>(PassId::kLight)] = new LightPass();
   m_renderPass[static_cast<size_t>(PassId::kCube)] = new CubeMapPass();
   m_renderPass[static_cast<size_t>(PassId::kBloom)] = new BloomPass();
   m_renderPass[static_cast<size_t>(PassId::kFxaa)] = new FxaaPass();
+  // m_renderPass[static_cast<size_t>(PassId::kTaa)] = new TaaPass();
   // m_renderPass[static_cast<size_t>(PassId::kDebug)] = new DebugPass();
 
   for (auto &p : m_renderPass) {
@@ -49,11 +50,12 @@ void FrameGraph::draw(ECSManager &eManager) {
     pass->Execute(eManager);
   }
 
-  // glBindFramebuffer(GL_READ_FRAMEBUFFER, FrameBufferManager::getInstance().getFBO("cubeFBO"));
-  // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-  // glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT,
-  //                   GL_NEAREST);
-  // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  // Blit the fbo we want to display
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, FrameBufferManager::getInstance().getFBO("FxaaFBO"));
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT,
+                    GL_NEAREST);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void FrameGraph::setViewport(uint32_t w, uint32_t h) {

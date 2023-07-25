@@ -14,16 +14,13 @@ FxaaPass::FxaaPass()
   uint32_t frameFxaa;
   glGenTextures(1, &frameFxaa);
   p_textureManager.setTexture("frameFxaa", frameFxaa, GL_TEXTURE_2D);
+
   setViewport(p_width, p_height);
 }
 
 void FxaaPass::Execute(ECSManager & /* eManager */) {
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  // p_fboManager.bindFBO("FxaaFBO");
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  p_fboManager.bindFBO("FxaaFBO");
   p_shaderProgram.use();
-  glUniform1i(p_shaderProgram.getUniformLocation("scene"), 0);
 
   glUniform2f(p_shaderProgram.getUniformLocation("resolution"), p_width, p_height);
   p_textureManager.bindActivateTexture("frameBloomFinal", 0);
