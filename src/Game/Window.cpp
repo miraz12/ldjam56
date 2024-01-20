@@ -28,7 +28,35 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void framebuffer_size_callback(GLFWwindow *window, i32 width, i32 height);
 void keyPressCallback(GLFWwindow *win, i32 key, i32 scancode, i32 action,
                       i32 mods);
+#ifdef EMSCRIPTEN
+EM_BOOL touch_start_callback(int eventType,
+                             const EmscriptenTouchEvent *touchEvent,
+                             void *userData);
+EM_BOOL touch_end_callback(int eventType,
+                           const EmscriptenTouchEvent *touchEvent,
+                           void *userData);
+EM_BOOL touch_cancel_callback(int eventType,
+                              const EmscriptenTouchEvent *touchEvent,
+                              void *userData);
+EM_BOOL touch_move_callback(int eventType,
+                            const EmscriptenTouchEvent *touchEvent,
+                            void *userData);
+EM_BOOL mouse_move_callback(int eventType,
+                            const EmscriptenMouseEvent *mouseEvent,
+                            void *userData);
+EM_BOOL mouse_click_callback(int eventType,
+                             const EmscriptenMouseEvent *mouseEvent,
+                             void *userData);
+EM_BOOL mouse_down_callback(int eventType,
+                            const EmscriptenMouseEvent *mouseEvent,
+                            void *userData);
+EM_BOOL mouse_up_callback(int eventType, const EmscriptenMouseEvent *mouseEvent,
+                          void *userData);
+
+#else
 void mousePressCallback(GLFWwindow *win, i32 button, i32 action, i32 mods);
+#endif
+
 void GLFW_error(int error, const char *description) {
   std::cout << description << std::endl;
 }
@@ -145,17 +173,41 @@ bool Window::open() {
     return false;
   }
   glfwMakeContextCurrent(window);
+  // glfwSetCursorPosCallback(window, mouse_callback);
+  // glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+  // glfwSetKeyCallback(window, keyPressCallback);
+
+#ifdef EMSCRIPTEN
+  emscripten_set_touchstart_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr,
+                                     EM_TRUE, touch_start_callback);
+  emscripten_set_touchend_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr,
+                                   EM_TRUE, touch_end_callback);
+  emscripten_set_touchcancel_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr,
+                                      EM_TRUE, touch_cancel_callback);
+  emscripten_set_touchmove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr,
+                                    EM_TRUE, touch_move_callback);
+  emscripten_set_mousemove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr,
+                                    EM_TRUE, mouse_move_callback);
+  emscripten_set_click_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr,
+                                EM_TRUE, mouse_click_callback);
+  emscripten_set_mousedown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr,
+                                    EM_TRUE, mouse_down_callback);
+  emscripten_set_mouseup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr,
+                                  EM_TRUE, mouse_up_callback);
+
+#else
   glfwSetMouseButtonCallback(window, mousePressCallback);
-  glfwSetCursorPosCallback(window, mouse_callback);
-  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-  glfwSetKeyCallback(window, keyPressCallback);
+#endif
 
   // Setup IMGUI
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
-
+  io.ConfigFlags |=
+      ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+  io.ConfigFlags |=
+      ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
   io.IniFilename = NULL;
 
   // Setup Dear ImGui style
@@ -166,6 +218,8 @@ bool Window::open() {
   ImGui_ImplOpenGL3_Init("#version 300 es");
 
 #ifndef EMSCRIPTEN
+
+  ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return false;
@@ -270,6 +324,7 @@ void mouse_callback(GLFWwindow * /* window */, double xpos, double ypos) {
     SCR_PITCH = -89.0f;
 
   game->getInputManager().setPitchYaw(SCR_PITCH, SCR_YAW);
+  std::cout << "MOUSE CLICK!" << std::endl;
 }
 
 void keyPressCallback(GLFWwindow *win, i32 key, i32 /* scancode */, i32 action,
@@ -316,6 +371,80 @@ void keyPressCallback(GLFWwindow *win, i32 key, i32 /* scancode */, i32 action,
   }
 }
 
+#ifdef EMSCRIPTEN
+EM_BOOL touch_start_callback(int eventType,
+                             const EmscriptenTouchEvent *touchEvent,
+                             void *userData) {
+  std::cout << "TOUCH START! x: " << touchEvent->touches[0].targetX
+            << "y: " << touchEvent->touches[0].targetY << std::endl;
+  return EM_FALSE;
+}
+EM_BOOL touch_end_callback(int eventType,
+                           const EmscriptenTouchEvent *touchEvent,
+                           void *userData) {
+
+  ImGuiIO &io = ImGui::GetIO();
+  double xpos, ypos;
+  // glfwGetCursorPos(window, &xpos, &ypos);
+  // io.MousePos = ImVec2(xpos, ypos); // Set mouse position to touch position
+  // io.MouseDown[0] = true;           // Simulate mouse button press
+
+  std::cout << "TOUCH END! x: " << xpos << "y: " << ypos << std::endl
+            << std::endl;
+  return EM_TRUE;
+}
+EM_BOOL touch_cancel_callback(int eventType,
+                              const EmscriptenTouchEvent *touchEvent,
+                              void *userData) {
+
+  std::cout << "TOUCH CANCEL! x: " << touchEvent->touches[0].targetX
+            << "y: " << touchEvent->touches[0].targetY << std::endl;
+  return EM_FALSE;
+}
+EM_BOOL touch_move_callback(int eventType,
+                            const EmscriptenTouchEvent *touchEvent,
+                            void *userData) {
+
+  std::cout << "TOUCH MOVE! x: " << touchEvent->touches[0].targetX
+            << "y: " << touchEvent->touches[0].targetY << std::endl;
+  return EM_TRUE;
+}
+
+EM_BOOL mouse_move_callback(int eventType,
+                            const EmscriptenMouseEvent *mouseEvent,
+                            void *userData) {
+  std::cout << "MOUSE MOVE! x: " << mouseEvent->targetX
+            << "y: " << mouseEvent->targetY << std::endl;
+
+  return EM_TRUE;
+}
+
+EM_BOOL mouse_click_callback(int eventType,
+                             const EmscriptenMouseEvent *mouseEvent,
+                             void *userData) {
+  std::cout << "MOUSE CLICK! x: " << mouseEvent->targetX
+            << "y: " << mouseEvent->targetY << std::endl;
+
+  return EM_TRUE;
+}
+
+EM_BOOL mouse_down_callback(int eventType,
+                            const EmscriptenMouseEvent *mouseEvent,
+                            void *userData) {
+  std::cout << "MOUSE DOWN! x: " << mouseEvent->targetX
+            << "y: " << mouseEvent->targetY << std::endl;
+
+  return EM_TRUE;
+}
+EM_BOOL mouse_up_callback(int eventType, const EmscriptenMouseEvent *mouseEvent,
+                          void *userData) {
+  std::cout << "MOUSE DOWN! x: " << mouseEvent->targetX
+            << "y: " << mouseEvent->targetY << std::endl;
+
+  return EM_TRUE;
+}
+
+#else
 void mousePressCallback(GLFWwindow * /* win */, i32 button, i32 action,
                         i32 /* mods */) {
   ImGuiIO &io = ImGui::GetIO();
@@ -327,7 +456,11 @@ void mousePressCallback(GLFWwindow * /* win */, i32 button, i32 action,
   double xpos, ypos;
   glfwGetCursorPos(window, &xpos, &ypos);
   game->getInputManager().setMousePos(xpos, ypos);
+
+  std::cout << "MOUSE CLICK!" << std::endl;
 }
+
+#endif
 
 void framebuffer_size_callback(GLFWwindow *window, i32 width, i32 height) {
   SCR_WIDTH = width;
