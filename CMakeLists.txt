@@ -7,8 +7,10 @@ if(LINUX)
     set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES
         ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
   endif()
+  # set(EMCC_DEBUG 1) 
+  set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif()
-# set(EMCC_DEBUG 1) set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+
 
 if(WIN32)
   add_compile_options(
